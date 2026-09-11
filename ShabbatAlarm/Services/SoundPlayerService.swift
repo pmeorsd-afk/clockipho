@@ -206,8 +206,8 @@ enum AudioToneGenerator {
         wavHeader.append(contentsOf: withUnsafeBytes(of: UInt32(dataSize).littleEndian) { Array($0) })
         
         var fullData = wavHeader
-        pcmData.withUnsafeBufferPointer { buffer in
-            fullData.append(UnsafeRawBufferPointer(buffer))
+        pcmData.withUnsafeBytes { rawBytes in
+            fullData.append(contentsOf: rawBytes)
         }
         
         return fullData

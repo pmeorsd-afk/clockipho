@@ -36,7 +36,7 @@ struct AlarmEditView: View {
         comp.minute = initialMinute
         let date = Calendar.current.date(from: comp) ?? Date()
         
-        _title = State(initialValue: existingAlarm?.title ?? "השכמה לשבת")
+        _title = State(initialValue: existingAlarm?.title ?? "שחרית שבת")
         _selectedDate = State(initialValue: date)
         _autoSilenceSeconds = State(initialValue: existingAlarm?.autoSilenceSeconds ?? 120) // Default 2 min
         _repeatDays = State(initialValue: existingAlarm?.repeatDays ?? Weekday.shabbatGroup)
@@ -47,145 +47,209 @@ struct AlarmEditView: View {
     
     var body: some View {
         NavigationStack {
-            Form {
-                // Section 1: Time Picker
-                Section {
-                    DatePicker("", selection: $selectedDate, displayedComponents: .hourAndMinute)
-                        .datePickerStyle(.wheel)
-                        .labelsHidden()
-                        .frame(maxWidth: .infinity, alignment: .center)
-                } header: {
-                    Text("שעת השכמה")
-                }
+            ZStack {
+                Color(.systemGroupedBackground).ignoresSafeArea()
                 
-                // Section 2: Title
-                Section {
-                    TextField("שם השעון (לדוגמה: שחרית, קימה)", text: $title)
-                } header: {
-                    Text("כותרת")
-                }
-                
-                // Section 3: Auto-silence Duration
-                Section {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("הצלצול יכבה מעצמו בדיוק לאחר:")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
+                ScrollView {
+                    VStack(spacing: 20) {
+                        // Section 1: Time Picker Card
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("שעת השכמה")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.secondary)
+                                .padding(.horizontal, 4)
+                            
+                            DatePicker("", selection: $selectedDate, displayedComponents: .hourAndMinute)
+                                .datePickerStyle(.wheel)
+                                .labelsHidden()
+                                .frame(maxWidth: .infinity, alignment: .center)
+                                .padding(.vertical, 8)
+                                .background(Color(.secondarySystemGroupedBackground))
+                                .cornerRadius(14)
+                        }
+                        .padding(.horizontal, 16)
                         
-                        // Preset Pills Grid
-                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                            ForEach(silencePresets, id: \.0) { preset in
-                                Button(action: {
-                                    autoSilenceSeconds = preset.0
-                                }) {
-                                    HStack {
-                                        Text(preset.1)
-                                            .font(.footnote)
-                                            .fontWeight(autoSilenceSeconds == preset.0 ? .bold : .regular)
-                                        Spacer()
-                                        if autoSilenceSeconds == preset.0 {
-                                            Image(systemName: "checkmark.circle.fill")
-                                                .foregroundColor(.blue)
-                                        }
-                                    }
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 10)
-                                    .background(autoSilenceSeconds == preset.0 ? Color.blue.opacity(0.12) : Color(.systemGray6))
-                                    .cornerRadius(8)
-                                }
-                                .buttonStyle(.plain)
-                            }
+                        // Section 2: Title Card
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("כותרת")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.secondary)
+                                .padding(.horizontal, 4)
+                            
+                            TextField("שם השעון (לדוגמה: שחרית, קימה)", text: $title)
+                                .padding(14)
+                                .background(Color(.secondarySystemGroupedBackground))
+                                .cornerRadius(12)
                         }
-                    }
-                    .padding(.vertical, 4)
-                } header: {
-                    Text("כיבוי אוטומטי לשבת ולימי חול")
-                } footer: {
-                    Text("מותאם לשבת: אין צורך במגע במסך או לחיצה על כפתורים. הצליל יפסק לחלוטין בתום הזמן שנבחר.")
-                        .font(.caption)
-                }
-                
-                // Section 4: Days of Week
-                Section {
-                    // Quick preset buttons
-                    HStack(spacing: 8) {
-                        Button("שבת בלבד") {
-                            repeatDays = Weekday.shabbatGroup
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(repeatDays == Weekday.shabbatGroup ? .purple : .gray.opacity(0.2))
+                        .padding(.horizontal, 16)
                         
-                        Button("ימי חול (א׳-ה׳)") {
-                            repeatDays = Weekday.weekdaysGroup
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(repeatDays == Weekday.weekdaysGroup ? .blue : .gray.opacity(0.2))
-                        
-                        Button("כל יום") {
-                            repeatDays = Weekday.everydayGroup
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(repeatDays == Weekday.everydayGroup ? .green : .gray.opacity(0.2))
-                    }
-                    .padding(.vertical, 4)
-                    
-                    // Individual Day Toggle Circles
-                    HStack {
-                        ForEach(Weekday.allCases) { day in
-                            let isSelected = repeatDays.contains(day)
-                            Button(action: {
-                                if isSelected {
-                                    repeatDays.remove(day)
-                                } else {
-                                    repeatDays.insert(day)
-                                }
-                            }) {
-                                Text(day.shortNameHe)
+                        // Section 3: Auto-silence Duration Card
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack {
+                                Text("כיבוי אוטומטי לשבת ולימי חול")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                                Text(autoSilenceLabel(autoSilenceSeconds))
                                     .font(.caption)
                                     .fontWeight(.bold)
-                                    .frame(width: 38, height: 38)
-                                    .background(isSelected ? (day == .saturday ? Color.purple : Color.blue) : Color(.systemGray5))
-                                    .foregroundColor(isSelected ? .white : .primary)
-                                    .clipShape(Circle())
+                                    .foregroundColor(.orange)
                             }
-                            .buttonStyle(.plain)
+                            .padding(.horizontal, 4)
+                            
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("הצלצול יכבה מעצמו בדיוק לאחר:")
+                                    .font(.footnote)
+                                    .foregroundColor(.secondary)
+                                
+                                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                                    ForEach(silencePresets, id: \.0) { preset in
+                                        Button(action: {
+                                            autoSilenceSeconds = preset.0
+                                        }) {
+                                            HStack {
+                                                Text(preset.1)
+                                                    .font(.footnote)
+                                                    .fontWeight(autoSilenceSeconds == preset.0 ? .bold : .regular)
+                                                Spacer()
+                                                if autoSilenceSeconds == preset.0 {
+                                                    Image(systemName: "checkmark.circle.fill")
+                                                        .foregroundColor(.blue)
+                                                }
+                                            }
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 10)
+                                            .background(autoSilenceSeconds == preset.0 ? Color.blue.opacity(0.15) : Color(.systemGray6))
+                                            .cornerRadius(8)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                                
+                                Text("מותאם לשבת: אין צורך במגע במסך או לחיצה על כפתורים. הצליל יפסק לחלוטין בתום הזמן שנבחר.")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(14)
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .cornerRadius(14)
                         }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical, 4)
-                } header: {
-                    Text("חזרתיות וימים")
-                }
-                
-                // Section 5: Sound & Volume
-                Section {
-                    Picker("צליל השכמה", selection: $selectedSoundId) {
-                        ForEach(AlarmSound.availableSounds) { sound in
-                            Text(sound.nameHe).tag(sound.id)
-                        }
-                    }
-                    
-                    Toggle("הגברה הדרגתית (Fade-In)", isOn: Binding(
-                        get: { fadeInSeconds > 0 },
-                        set: { fadeInSeconds = $0 ? 15 : 0 }
-                    ))
-                    
-                    if fadeInSeconds > 0 {
-                        HStack {
-                            Text("משך עליית הווליום: \(fadeInSeconds) שניות")
-                                .font(.footnote)
+                        .padding(.horizontal, 16)
+                        
+                        // Section 4: Days of Week Card
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("חזרתיות וימים")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
                                 .foregroundColor(.secondary)
-                            Spacer()
-                            Stepper("", value: $fadeInSeconds, in: 5...30, step: 5)
-                                .labelsHidden()
+                                .padding(.horizontal, 4)
+                            
+                            VStack(spacing: 12) {
+                                // Quick preset buttons
+                                HStack(spacing: 8) {
+                                    Button("שבת בלבד") {
+                                        repeatDays = Weekday.shabbatGroup
+                                    }
+                                    .buttonStyle(.borderedProminent)
+                                    .tint(repeatDays == Weekday.shabbatGroup ? .purple : .gray.opacity(0.2))
+                                    
+                                    Button("ימי חול (א׳-ה׳)") {
+                                        repeatDays = Weekday.weekdaysGroup
+                                    }
+                                    .buttonStyle(.borderedProminent)
+                                    .tint(repeatDays == Weekday.weekdaysGroup ? .blue : .gray.opacity(0.2))
+                                    
+                                    Button("כל יום") {
+                                        repeatDays = Weekday.everydayGroup
+                                    }
+                                    .buttonStyle(.borderedProminent)
+                                    .tint(repeatDays == Weekday.everydayGroup ? .green : .gray.opacity(0.2))
+                                }
+                                
+                                // Individual Day Toggle Circles
+                                HStack(spacing: 8) {
+                                    ForEach(Weekday.allCases) { day in
+                                        let isSelected = repeatDays.contains(day)
+                                        Button(action: {
+                                            if isSelected {
+                                                repeatDays.remove(day)
+                                            } else {
+                                                repeatDays.insert(day)
+                                            }
+                                        }) {
+                                            Text(day.shortNameHe)
+                                                .font(.caption)
+                                                .fontWeight(.bold)
+                                                .frame(width: 38, height: 38)
+                                                .background(isSelected ? (day == .saturday ? Color.purple : Color.blue) : Color(.systemGray5))
+                                                .foregroundColor(isSelected ? .white : .primary)
+                                                .clipShape(Circle())
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                                .frame(maxWidth: .infinity, alignment: .center)
+                            }
+                            .padding(14)
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .cornerRadius(14)
                         }
+                        .padding(.horizontal, 16)
+                        
+                        // Section 5: Sound & Volume Card
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("שמע והתנהגות")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.secondary)
+                                .padding(.horizontal, 4)
+                            
+                            VStack(spacing: 12) {
+                                HStack {
+                                    Text("צליל השכמה")
+                                        .font(.subheadline)
+                                    Spacer()
+                                    Picker("", selection: $selectedSoundId) {
+                                        ForEach(AlarmSound.availableSounds) { sound in
+                                            Text(sound.nameHe).tag(sound.id)
+                                        }
+                                    }
+                                    .labelsHidden()
+                                }
+                                
+                                Divider()
+                                
+                                Toggle("הגברה הדרגתית (Fade-In)", isOn: Binding(
+                                    get: { fadeInSeconds > 0 },
+                                    set: { fadeInSeconds = $0 ? 15 : 0 }
+                                ))
+                                
+                                if fadeInSeconds > 0 {
+                                    HStack {
+                                        Text("משך עליית הווליום: \(fadeInSeconds) שניות")
+                                            .font(.footnote)
+                                            .foregroundColor(.secondary)
+                                        Spacer()
+                                        Stepper("", value: $fadeInSeconds, in: 5...30, step: 5)
+                                            .labelsHidden()
+                                    }
+                                }
+                                
+                                Divider()
+                                
+                                Toggle("ביטול רטט (מומלץ לשבת)", isOn: $disableVibration)
+                            }
+                            .padding(14)
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .cornerRadius(14)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 24)
                     }
-                    
-                    Toggle("ביטול רטט (מומלץ לשבת)", isOn: $disableVibration)
-                } header: {
-                    Text("שמע והתנהגות")
-                } footer: {
-                    Text("ביטול הרטט מונע רעש טלטול על השידה ומותאם לדיני שבת.")
+                    .padding(.top, 10)
                 }
             }
             .navigationTitle(existingAlarm == nil ? "הוספת שעון מעורר" : "עריכת שעון")
@@ -205,6 +269,12 @@ struct AlarmEditView: View {
                 }
             }
         }
+    }
+    
+    private func autoSilenceLabel(_ sec: Int) -> String {
+        if sec < 60 { return "\(sec) שניות" }
+        let mins = sec / 60
+        return mins == 1 ? "דקה אחת" : (mins == 2 ? "2 דקות" : "\(mins) דקות")
     }
     
     private func saveAlarm() {

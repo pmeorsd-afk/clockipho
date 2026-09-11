@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>שעון מעורר לשבת ולימי חול - סימולטור iOS 17</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700;800&family=JetBrains+Mono:wght@300;500;700&display=swap');
+    body {
+      font-family: 'Assistant', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #0b0f19;
+      color: #f3f4f6;
+    }
+    .mono-font {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .ios-blur {
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+    /* Hide scrollbar */
+    ::-webkit-scrollbar {
+      width: 0px;
+      background: transparent;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4 selection:bg-purple-600 selection:text-white">
+
+  <!-- Desktop Header -->
+  <header class="text-center mb-6 max-w-xl">
+    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-900/40 border border-purple-500/30 text-purple-300 text-xs font-semibold mb-2">
+      <i class="fa-solid fa-moon"></i> מותאם במיוחד לשבת קודש ולימי חול
+    </div>
+    <h1 class="text-3xl font-extrabold tracking-tight text-white mb-1">שעון מעורר עם כיבוי אוטומטי</h1>
+    <p class="text-gray-400 text-sm">הדמיה חיה של אפליקציית ה-iOS 17 • פועל עצמאית, נכבה אוטומטית (למשל אחרי 2 דקות) ללא צורך במגע</p>
+  </header>
+
+  <!-- iPhone Mockup Container -->
+  <div class="relative w-full max-w-[390px] h-[800px] bg-black rounded-[50px] p-3.5 shadow-2xl border-4 border-gray-800 ring-1 ring-white/10 flex flex-col overflow-hidden">
+    
+    <!-- iPhone Dynamic Island / Speaker -->
+    <div class="absolute top-4 left-1/2 -translate-x-1/2 w-28 h-7 bg-black rounded-full z-50 flex items-center justify-between px-3">
+      <div class="w-3 h-3 rounded-full bg-gray-900 ring-1 ring-gray-800"></div>
+      <div class="w-2.5 h-2.5 rounded-full bg-blue-950/60"></div>
+    </div>
+
+    <!-- Screen Content Container -->
+    <div id="screen" class="relative w-full h-full bg-[#121214] rounded-[42px] overflow-hidden flex flex-col pt-10">
+
+      <!-- ================= SCREEN 1: MAIN ALARMS LIST ================= -->
+      <div id="view-list" class="flex flex-col h-full">
+        <!-- Top Nav -->
+        <div class="px-5 pt-3 pb-2 flex items-center justify-between border-b border-gray-800/60 bg-[#121214]/90 ios-blur sticky top-0 z-30">
+          <button onclick="openSettings()" class="text-gray-400 hover:text-white transition">
+            <i class="fa-solid fa-circle-info text-lg"></i>
+          </button>
+          <div class="text-center">
+            <h2 class="text-base font-bold text-white">שעון לשבת ולימי חול</h2>
+            <div id="live-time-pill" class="text-[11px] text-purple-400 font-mono">00:00:00</div>
+          </div>
+          <button onclick="openEditModal()" class="text-purple-400 hover:text-purple-300 font-bold transition">
+            <i class="fa-solid fa-circle-plus text-2xl"></i>
+          </button>
+        </div>
+
+        <!-- Shabbat Quick Mode Banner -->
+        <div class="p-4 bg-gradient-to-r from-purple-950/40 via-indigo-950/30 to-purple-950/40 border-b border-purple-900/30">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-sm font-bold text-purple-200">מצב מעמד שבת (OLED)</h3>
+              <p class="text-xs text-gray-400">מסך חשוך • ללא מגע • כיבוי אוטומטי</p>
+            </div>
+            <button onclick="enterShabbatMode()" class="px-3.5 py-1.5 rounded-full bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs shadow-lg shadow-purple-600/30 flex items-center gap-1.5 transition active:scale-95">
+              <i class="fa-solid fa-moon"></i>
+              הפעל מצב שבת
+            </button>
+          </div>
+        </div>
+
+        <!-- Ringing Notification Banner (if active) -->
+        <div id="ringing-banner" class="hidden mx-3 my-2 p-3 rounded-2xl bg-amber-600 text-white shadow-lg animate-pulse flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-bell text-lg"></i>
+            <div>
+              <div class="text-xs font-bold" id="ringing-title">שחרית שבת</div>
+              <div class="text-[11px] opacity-90">כיבוי בעוד: <span id="ringing-countdown" class="font-mono font-bold">02:00</span></div>
+            </div>
+          </div>
+          <button onclick="stopSound(true)" class="px-2.5 py-1 rounded-lg bg-white text-amber-700 font-bold text-xs">
+            עצור (חול)
+          </button>
+        </div>
+
+        <!-- Alarms Scrollable List -->
+        <div class="flex-1 overflow-y-auto px-4 py-3 space-y-3" id="alarms-container">
+          <!-- Rendered via JS -->
+        </div>
+
+        <!-- Quick Test Footer -->
+        <div class="p-3 bg-[#18181b] border-t border-gray-800/80 flex items-center justify-between">
+          <button onclick="triggerTestAlarm(10)" class="w-full py-2 px-3 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-2 transition active:scale-98">
+            <i class="fa-solid fa-play text-green-400"></i>
+            בדיקת צלצול וכיבוי אוטומטי (10 שניות)
+          </button>
+        </div>
+      </div>
+
+      <!-- ================= SCREEN 2: SHABBAT NIGHTSTAND (OLED) ================= -->
+      <div id="view-shabbat" class="hidden absolute inset-0 bg-black z-40 flex flex-col p-6 select-none transition-opacity duration-300">
+        <!-- Top bar -->
+        <div class="flex items-center justify-between opacity-30 hover:opacity-100 transition duration-200">
+          <button onclick="exitShabbatMode()" class="px-3 py-1.5 rounded-lg bg-white/10 text-gray-300 text-xs flex items-center gap-1.5">
+            <i class="fa-solid fa-arrow-right"></i> חזרה לרשימה
+          </button>
+          <div class="flex items-center gap-1.5 text-xs text-green-400">
+            <span class="w-2 h-2 rounded-full bg-green-500 animate-ping"></span>
+            מצב שבת פעיל
+          </div>
+        </div>
+
+        <!-- Center Display (Huge Clock) -->
+        <div class="flex-1 flex flex-col items-center justify-center text-center">
+          <div id="shabbat-ringing-box" class="hidden mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 max-w-xs">
+            <div class="flex items-center justify-center gap-2 text-lg font-bold mb-1">
+              <i class="fa-solid fa-bell animate-bounce"></i> <span id="shabbat-ringing-name">שחרית</span>
+            </div>
+            <div class="text-sm">כיבוי אוטומטי בעוד:</div>
+            <div class="text-2xl font-mono font-black text-amber-400" id="shabbat-ringing-timer">01:59</div>
+            <div class="text-[10px] text-gray-400 mt-1">אין צורך לגעת כלל • ייכבה עצמאית</div>
+          </div>
+
+          <div id="shabbat-clock" class="text-7xl font-light font-mono text-white/40 tracking-wider transition-all duration-300">
+            07:29
+          </div>
+          <div id="shabbat-date" class="text-sm text-gray-500 mt-2">
+            שבת קודש
+          </div>
+
+          <div class="mt-8 px-4 py-2 rounded-full bg-white/5 border border-white/5 text-gray-400 text-xs flex items-center gap-2" id="shabbat-next-pill">
+            <i class="fa-regular fa-clock text-purple-400"></i>
+            <span>שעון קרוב: 07:30 (כיבוי ב-2 דקות)</span>
+          </div>
+        </div>
+
+        <!-- Bottom Dimmer Control -->
+        <div class="flex flex-col items-center gap-1 opacity-25 hover:opacity-100 transition duration-200">
+          <div class="flex items-center gap-3 w-48">
+            <i class="fa-solid fa-moon text-xs text-gray-500"></i>
+            <input type="range" min="0.05" max="1" step="0.05" value="0.3" id="dimmer-slider" oninput="changeDimmer(this.value)" class="w-full h-1 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-purple-500">
+            <i class="fa-solid fa-sun text-xs text-gray-500"></i>
+          </div>
+          <span class="text-[9px] text-gray-600">עמעום מסך לשינה בחדר חשוך</span>
+        </div>
+      </div>
+
+      <!-- ================= MODAL: ADD / EDIT ALARM ================= -->
+      <div id="modal-edit" class="hidden absolute inset-0 bg-black/80 ios-blur z-50 flex flex-col justify-end">
+        <div class="bg-[#1c1c1e] rounded-t-3xl border-t border-gray-800 p-5 max-h-[90%] overflow-y-auto space-y-4">
+          <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+            <button onclick="closeEditModal()" class="text-sm text-gray-400">ביטול</button>
+            <h3 class="text-base font-bold text-white" id="modal-title">הוספת שעון מעורר</h3>
+            <button onclick="saveAlarmFromModal()" class="text-sm font-bold text-purple-400">שמור</button>
+          </div>
+
+          <!-- Time Input -->
+          <div class="bg-[#2c2c2e] p-3 rounded-2xl flex items-center justify-center gap-3">
+            <input type="number" id="input-hour" min="0" max="23" value="7" class="w-16 h-14 bg-black text-white text-3xl font-mono font-bold text-center rounded-xl focus:ring-2 focus:ring-purple-500 outline-none">
+            <span class="text-3xl font-mono text-purple-400">:</span>
+            <input type="number" id="input-minute" min="0" max="59" value="30" class="w-16 h-14 bg-black text-white text-3xl font-mono font-bold text-center rounded-xl focus:ring-2 focus:ring-purple-500 outline-none">
+          </div>
+
+          <!-- Title Input -->
+          <div>
+            <label class="text-xs text-gray-400 font-semibold mb-1 block">שם השעון</label>
+            <input type="text" id="input-title" value="שחרית שבת" class="w-full bg-[#2c2c2e] text-white p-3 rounded-xl text-sm focus:ring-2 focus:ring-purple-500 outline-none">
+          </div>
+
+          <!-- Auto-silence selection -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="text-xs text-gray-300 font-bold flex items-center gap-1">
+                <i class="fa-solid fa-stopwatch text-amber-400"></i> כיבוי אוטומטי (ללא צורך במגע)
+              </label>
+              <span class="text-[11px] text-amber-400" id="selected-duration-label">2 דקות</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+              <button type="button" onclick="setSilenceDuration(30, this)" class="dur-btn py-2 rounded-xl bg-[#2c2c2e] text-xs font-semibold text-gray-300 hover:bg-gray-700">30 שנ׳</button>
+              <button type="button" onclick="setSilenceDuration(60, this)" class="dur-btn py-2 rounded-xl bg-[#2c2c2e] text-xs font-semibold text-gray-300 hover:bg-gray-700">1 דקה</button>
+              <button type="button" onclick="setSilenceDuration(120, this)" class="dur-btn py-2 rounded-xl bg-purple-600 text-xs font-bold text-white ring-2 ring-purple-400">2 דקות (מומלץ)</button>
+              <button type="button" onclick="setSilenceDuration(180, this)" class="dur-btn py-2 rounded-xl bg-[#2c2c2e] text-xs font-semibold text-gray-300 hover:bg-gray-700">3 דקות</button>
+              <button type="button" onclick="setSilenceDuration(300, this)" class="dur-btn py-2 rounded-xl bg-[#2c2c2e] text-xs font-semibold text-gray-300 hover:bg-gray-700">5 דקות</button>
+              <button type="button" onclick="setSilenceDuration(600, this)" class="dur-btn py-2 rounded-xl bg-[#2c2c2e] text-xs font-semibold text-gray-300 hover:bg-gray-700">10 דקות</button>
+            </div>
+            <p class="text-[10px] text-gray-500 mt-1">השעון יצלצל במשך הזמן שנבחר וישתתק אוטומטית לחלוטין.</p>
+          </div>
+
+          <!-- Day presets -->
+          <div>
+            <label class="text-xs text-gray-400 font-semibold mb-1.5 block">ימי חזרה</label>
+            <div class="flex gap-2 mb-2">
+              <button type="button" onclick="setPresetDays('shabbat')" class="flex-1 py-1.5 rounded-lg bg-purple-950/60 text-purple-300 border border-purple-500/30 text-xs font-semibold">שבת בלבד</button>
+              <button type="button" onclick="setPresetDays('weekdays')" class="flex-1 py-1.5 rounded-lg bg-blue-950/60 text-blue-300 border border-blue-500/30 text-xs font-semibold">ימי חול (א׳-ה׳)</button>
+              <button type="button" onclick="setPresetDays('everyday')" class="flex-1 py-1.5 rounded-lg bg-gray-800 text-gray-300 text-xs font-semibold">כל יום</button>
+            </div>
+            <div class="flex justify-between" id="days-circles">
+              <button type="button" data-day="1" onclick="toggleDay(1, this)" class="w-9 h-9 rounded-full bg-[#2c2c2e] text-xs font-bold text-gray-300">א׳</button>
+              <button type="button" data-day="2" onclick="toggleDay(2, this)" class="w-9 h-9 rounded-full bg-[#2c2c2e] text-xs font-bold text-gray-300">ב׳</button>
+              <button type="button" data-day="3" onclick="toggleDay(3, this)" class="w-9 h-9 rounded-full bg-[#2c2c2e] text-xs font-bold text-gray-300">ג׳</button>
+              <button type="button" data-day="4" onclick="toggleDay(4, this)" class="w-9 h-9 rounded-full bg-[#2c2c2e] text-xs font-bold text-gray-300">ד׳</button>
+              <button type="button" data-day="5" onclick="toggleDay(5, this)" class="w-9 h-9 rounded-full bg-[#2c2c2e] text-xs font-bold text-gray-300">ה׳</button>
+              <button type="button" data-day="6" onclick="toggleDay(6, this)" class="w-9 h-9 rounded-full bg-[#2c2c2e] text-xs font-bold text-gray-300">ו׳</button>
+              <button type="button" data-day="7" onclick="toggleDay(7, this)" class="w-9 h-9 rounded-full bg-purple-600 text-xs font-bold text-white ring-2 ring-purple-400">שבת</button>
+            </div>
+          </div>
+
+          <!-- Sound Selector -->
+          <div>
+            <label class="text-xs text-gray-400 font-semibold mb-1 block">צליל</label>
+            <select id="input-sound" class="w-full bg-[#2c2c2e] text-white p-3 rounded-xl text-sm focus:ring-2 focus:ring-purple-500 outline-none">
+              <option value="shofar">קול שופר (תקיעה)</option>
+              <option value="gentle_morning">בוקר רגוע (הרמוני)</option>
+              <option value="chimes">פעמוני שחרית</option>
+              <option value="birds">ציוץ ציפורים וטבע</option>
+              <option value="classic_alarm">שעון מעורר קלאסי</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= MODAL: SETTINGS & GUIDE ================= -->
+      <div id="modal-settings" class="hidden absolute inset-0 bg-black/80 ios-blur z-50 flex flex-col justify-end">
+        <div class="bg-[#1c1c1e] rounded-t-3xl border-t border-gray-800 p-5 max-h-[85%] overflow-y-auto space-y-4">
+          <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+            <h3 class="text-base font-bold text-white">הנחיות לשימוש בשבת</h3>
+            <button onclick="closeSettings()" class="text-sm font-bold text-purple-400">סגור</button>
+          </div>
+
+          <div class="space-y-3 text-xs text-gray-300">
+            <div class="p-3 rounded-xl bg-purple-950/40 border border-purple-800/40">
+              <span class="font-bold text-purple-200">1. חיבור למטען</span>
+              <p class="text-gray-400 mt-0.5">חבר את האייפון למטען על השידה לפני כניסת השבת כדי שהסוללה תישמר.</p>
+            </div>
+            <div class="p-3 rounded-xl bg-purple-950/40 border border-purple-800/40">
+              <span class="font-bold text-purple-200">2. הפעלת מצב שבת</span>
+              <p class="text-gray-400 mt-0.5">לחץ על כפתור "מצב שבת". המסך יוחשך ויישאר פעיל ללא כיבוי עצמי.</p>
+            </div>
+            <div class="p-3 rounded-xl bg-purple-950/40 border border-purple-800/40">
+              <span class="font-bold text-purple-200">3. כיבוי אוטומטי מוחלט</span>
+              <p class="text-gray-400 mt-0.5">כשהשעון יצלצל (למשל ב-07:30), הוא יצלצל במשך 2 דקות בדיוק, ויכבה מעצמו לחלוטין ללא שום צורך במגע או לחיצה!</p>
+            </div>
+            <div class="p-3 rounded-xl bg-gray-900 border border-gray-800">
+              <span class="font-bold text-gray-200">היבט הלכתי</span>
+              <p class="text-gray-400 mt-0.5">מכוון מערב שבת, השמעת הקול והפסקתו מתבצעים ע״י טיימר אוטומטי בלבד ללא שום פעולה אנושית בשבת.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- iPhone Home Bar Indicator -->
+    <div class="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-white/40 rounded-full"></div>
+  </div>
+
+  <!-- Audio Synthesis Engine & Logic -->
+  <script>
+    // State
+    let alarms = [
+      { id: 1, title: 'שחרית שבת', hour: 7, minute: 30, autoSilenceSec: 120, repeatDays: [7], enabled: true, sound: 'shofar' },
+      { id: 2, title: 'השכמה יומית', hour: 6, minute: 45, autoSilenceSec: 120, repeatDays: [1,2,3,4,5], enabled: true, sound: 'gentle_morning' },
+      { id: 3, title: 'מנחה וקריאה', hour: 13, minute: 15, autoSilenceSec: 60, repeatDays: [7], enabled: false, sound: 'chimes' }
+    ];
+
+    let currentEditingId = null;
+    let selectedSilenceSec = 120;
+    let selectedDays = new Set([7]);
+
+    // Audio & Timer variables
+    let audioCtx = null;
+    let alarmOsc = null;
+    let alarmGain = null;
+    let ringingTimer = null;
+    let remainingSeconds = 0;
+    let isRinging = false;
+    let activeAlarmObj = null;
+
+    // Web Audio Synthesizer
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playTone(type) {
+      initAudio();
+      stopSound(false);
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      // Gentle chord / beep frequency
+      let baseFreq = 528; // Harmonic wake-up tone
+      if (type === 'shofar') baseFreq = 440;
+      if (type === 'birds') baseFreq = 880;
+
+      osc.type = type === 'shofar' ? 'sawtooth' : 'sine';
+      osc.frequency.setValueAtTime(baseFreq, audioCtx.currentTime);
+
+      // Pulse modulation
+      gain.gain.setValueAtTime(0.01, audioCtx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 1.5); // Fade-in
+
+      // Create subtle pulsing effect
+      const lfo = audioCtx.createOscillator();
+      const lfoGain = audioCtx.createGain();
+      lfo.frequency.value = 2; // 2Hz pulse
+      lfoGain.gain.value = 0.2;
+      lfo.connect(gain.gain);
+      lfo.start();
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+
+      alarmOsc = osc;
+      alarmGain = gain;
+    }
+
+    function stopSound(isUser) {
+      if (alarmGain && audioCtx) {
+        try {
+          alarmGain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+          setTimeout(() => {
+            if (alarmOsc) {
+              alarmOsc.stop();
+              alarmOsc.disconnect();
+              alarmOsc = null;
+            }
+          }, 350);
+        } catch(e) {}
+      }
+      if (ringingTimer) {
+        clearInterval(ringingTimer);
+        ringingTimer = null;
+      }
+      isRinging = false;
+      document.getElementById('ringing-banner').classList.add('hidden');
+      document.getElementById('shabbat-ringing-box').classList.add('hidden');
+    }
+
+    function startRingingAlarm(alarm) {
+      isRinging = true;
+      activeAlarmObj = alarm;
+      remainingSeconds = alarm.autoSilenceSec;
+
+      playTone(alarm.sound);
+
+      // Update UI Banners
+      document.getElementById('ringing-title').innerText = alarm.title;
+      document.getElementById('shabbat-ringing-name').innerText = alarm.title;
+      document.getElementById('ringing-banner').classList.remove('hidden');
+      document.getElementById('shabbat-ringing-box').classList.remove('hidden');
+      updateCountdownLabels();
+
+      // Auto-silence interval
+      ringingTimer = setInterval(() => {
+        remainingSeconds--;
+        updateCountdownLabels();
+        if (remainingSeconds <= 0) {
+          // AUTO SILENCE!
+          stopSound(false);
+        }
+      }, 1000);
+    }
+
+    function updateCountdownLabels() {
+      const m = Math.floor(remainingSeconds / 60);
+      const s = remainingSeconds % 60;
+      const formatted = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+      document.getElementById('ringing-countdown').innerText = formatted;
+      document.getElementById('shabbat-ringing-timer').innerText = formatted;
+    }
+
+    function triggerTestAlarm(seconds) {
+      const testAlarm = {
+        title: 'בדיקת כיבוי אוטומטי',
+        autoSilenceSec: seconds,
+        sound: 'gentle_morning'
+      };
+      startRingingAlarm(testAlarm);
+    }
+
+    // Render Alarms
+    function renderAlarms() {
+      const container = document.getElementById('alarms-container');
+      container.innerHTML = '';
+
+      alarms.forEach(a => {
+        const timeStr = `${String(a.hour).padStart(2, '0')}:${String(a.minute).padStart(2, '0')}`;
+        
+        let durText = `${a.autoSilenceSec / 60} דקות`;
+        if (a.autoSilenceSec < 60) durText = `${a.autoSilenceSec} שנ׳`;
+
+        let daysText = 'פעם אחת';
+        if (a.repeatDays.length === 7) daysText = 'כל יום';
+        else if (a.repeatDays.length === 1 && a.repeatDays[0] === 7) daysText = 'שבת בלבד';
+        else if (a.repeatDays.length === 5 && !a.repeatDays.includes(6) && !a.repeatDays.includes(7)) daysText = 'ימי חול (א׳-ה׳)';
+        else if (a.repeatDays.length > 0) {
+          const names = ['', 'א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'שבת'];
+          daysText = a.repeatDays.map(d => names[d]).join(', ');
+        }
+
+        const isShabbat = a.repeatDays.includes(7) && a.repeatDays.length === 1;
+
+        const card = document.createElement('div');
+        card.className = `p-3.5 rounded-2xl bg-[#1c1c1e] border ${a.enabled ? 'border-gray-700/60' : 'border-gray-800/40 opacity-50'} transition duration-150 flex items-center justify-between cursor-pointer hover:bg-[#232326]`;
+        card.onclick = (e) => {
+          if (e.target.tagName !== 'INPUT') openEditModal(a.id);
+        };
+
+        card.innerHTML = `
+          <div>
+            <div class="flex items-baseline gap-2">
+              <span class="text-3xl font-semibold font-mono text-white">${timeStr}</span>
+              <span class="text-xs text-gray-400 font-medium">${a.title}</span>
+            </div>
+            <div class="flex items-center gap-2 mt-1.5">
+              <span class="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-400 text-[10px] font-bold flex items-center gap-1">
+                <i class="fa-solid fa-stopwatch text-[9px]"></i> כיבוי ב-${durText}
+              </span>
+              <span class="px-2 py-0.5 rounded-md ${isShabbat ? 'bg-purple-500/20 text-purple-300' : 'bg-blue-500/15 text-blue-300'} text-[10px] font-semibold">
+                ${daysText}
+              </span>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <label class="relative inline-flex items-center cursor-pointer" onclick="event.stopPropagation()">
+              <input type="checkbox" ${a.enabled ? 'checked' : ''} onchange="toggleAlarm(${a.id})" class="sr-only peer">
+              <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+            </label>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+
+      updateNextPill();
+    }
+
+    function toggleAlarm(id) {
+      const a = alarms.find(x => x.id === id);
+      if (a) {
+        a.enabled = !a.enabled;
+        renderAlarms();
+      }
+    }
+
+    function updateNextPill() {
+      const enabledAlarms = alarms.filter(a => a.enabled);
+      if (enabledAlarms.length > 0) {
+        const next = enabledAlarms[0];
+        const timeStr = `${String(next.hour).padStart(2, '0')}:${String(next.minute).padStart(2, '0')}`;
+        document.getElementById('shabbat-next-pill').innerHTML = `<i class="fa-regular fa-clock text-purple-400"></i> <span>שעון קרוב: ${timeStr} • כיבוי ב-${next.autoSilenceSec / 60} דקות</span>`;
+      } else {
+        document.getElementById('shabbat-next-pill').innerHTML = `<span>אין שעונים פעילים</span>`;
+      }
+    }
+
+    // Modal Handlers
+    function openEditModal(id = null) {
+      currentEditingId = id;
+      const modal = document.getElementById('modal-edit');
+      modal.classList.remove('hidden');
+
+      if (id) {
+        const a = alarms.find(x => x.id === id);
+        document.getElementById('modal-title').innerText = 'עריכת שעון';
+        document.getElementById('input-hour').value = a.hour;
+        document.getElementById('input-minute').value = a.minute;
+        document.getElementById('input-title').value = a.title;
+        document.getElementById('input-sound').value = a.sound;
+        setSilenceDuration(a.autoSilenceSec);
+        selectedDays = new Set(a.repeatDays);
+      } else {
+        document.getElementById('modal-title').innerText = 'הוספת שעון מעורר';
+        document.getElementById('input-hour').value = 7;
+        document.getElementById('input-minute').value = 30;
+        document.getElementById('input-title').value = 'שחרית שבת';
+        setSilenceDuration(120);
+        selectedDays = new Set([7]);
+      }
+      refreshDaysUI();
+    }
+
+    function closeEditModal() {
+      document.getElementById('modal-edit').classList.add('hidden');
+    }
+
+    function setSilenceDuration(sec, btn = null) {
+      selectedSilenceSec = sec;
+      const mins = sec / 60;
+      document.getElementById('selected-duration-label').innerText = sec < 60 ? `${sec} שניות` : `${mins} דקות`;
+
+      document.querySelectorAll('.dur-btn').forEach(b => {
+        b.className = 'dur-btn py-2 rounded-xl bg-[#2c2c2e] text-xs font-semibold text-gray-300 hover:bg-gray-700';
+      });
+
+      if (btn) {
+        btn.className = 'dur-btn py-2 rounded-xl bg-purple-600 text-xs font-bold text-white ring-2 ring-purple-400';
+      } else {
+        document.querySelectorAll('.dur-btn').forEach(b => {
+          if (b.innerText.includes(sec < 60 ? '30' : `${mins}`)) {
+            b.className = 'dur-btn py-2 rounded-xl bg-purple-600 text-xs font-bold text-white ring-2 ring-purple-400';
+          }
+        });
+      }
+    }
+
+    function setPresetDays(preset) {
+      if (preset === 'shabbat') selectedDays = new Set([7]);
+      else if (preset === 'weekdays') selectedDays = new Set([1,2,3,4,5]);
+      else if (preset === 'everyday') selectedDays = new Set([1,2,3,4,5,6,7]);
+      refreshDaysUI();
+    }
+
+    function toggleDay(day, btn) {
+      if (selectedDays.has(day)) selectedDays.delete(day);
+      else selectedDays.add(day);
+      refreshDaysUI();
+    }
+
+    function refreshDaysUI() {
+      document.querySelectorAll('#days-circles button').forEach(b => {
+        const d = parseInt(b.getAttribute('data-day'));
+        if (selectedDays.has(d)) {
+          b.className = 'w-9 h-9 rounded-full bg-purple-600 text-xs font-bold text-white ring-2 ring-purple-400';
+        } else {
+          b.className = 'w-9 h-9 rounded-full bg-[#2c2c2e] text-xs font-bold text-gray-400';
+        }
+      });
+    }
+
+    function saveAlarmFromModal() {
+      const h = parseInt(document.getElementById('input-hour').value) || 0;
+      const m = parseInt(document.getElementById('input-minute').value) || 0;
+      const title = document.getElementById('input-title').value.trim() || 'שעון מעורר';
+      const sound = document.getElementById('input-sound').value;
+
+      if (currentEditingId) {
+        const a = alarms.find(x => x.id === currentEditingId);
+        a.hour = h;
+        a.minute = m;
+        a.title = title;
+        a.sound = sound;
+        a.autoSilenceSec = selectedSilenceSec;
+        a.repeatDays = Array.from(selectedDays);
+      } else {
+        alarms.push({
+          id: Date.now(),
+          title: title,
+          hour: h,
+          minute: m,
+          autoSilenceSec: selectedSilenceSec,
+          repeatDays: Array.from(selectedDays),
+          enabled: true,
+          sound: sound
+        });
+      }
+
+      closeEditModal();
+      renderAlarms();
+    }
+
+    // Shabbat Mode Display
+    function enterShabbatMode() {
+      document.getElementById('view-shabbat').classList.remove('hidden');
+    }
+
+    function exitShabbatMode() {
+      document.getElementById('view-shabbat').classList.add('hidden');
+    }
+
+    function changeDimmer(val) {
+      document.getElementById('shabbat-clock').style.opacity = Math.max(0.1, val);
+      document.getElementById('shabbat-date').style.opacity = Math.max(0.1, val * 0.8);
+    }
+
+    function openSettings() {
+      document.getElementById('modal-settings').classList.remove('hidden');
+    }
+    function closeSettings() {
+      document.getElementById('modal-settings').classList.add('hidden');
+    }
+
+    // Live Clock Update
+    setInterval(() => {
+      const now = new Date();
+      const h = String(now.getHours()).padStart(2, '0');
+      const m = String(now.getMinutes()).padStart(2, '0');
+      const s = String(now.getSeconds()).padStart(2, '0');
+      document.getElementById('live-time-pill').innerText = `${h}:${m}:${s}`;
+      document.getElementById('shabbat-clock').innerText = `${h}:${m}`;
+    }, 1000);
+
+    // Initial render
+    renderAlarms();
+  </script>
+</body>
+</html>

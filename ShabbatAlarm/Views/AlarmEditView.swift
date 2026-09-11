@@ -204,7 +204,6 @@ struct AlarmEditView: View {
                     .fontWeight(.bold)
                 }
             }
-            .environment(\.layoutDirection, .rightToLeft)
         }
     }
     

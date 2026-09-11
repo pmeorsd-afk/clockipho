@@ -92,7 +92,6 @@ struct SettingsView: View {
                     }
                 }
             }
-            .environment(\.layoutDirection, .rightToLeft)
         }
     }
 }

@@ -160,7 +160,6 @@ struct ShabbatNightstandView: View {
             }
             .padding()
         }
-        .environment(\.layoutDirection, .rightToLeft)
         .contentShape(Rectangle())
         .onTapGesture {
             withAnimation(.easeInOut(duration: 0.25)) {
